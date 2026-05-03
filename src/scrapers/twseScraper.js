@@ -30,6 +30,9 @@ async function fetchFullStockList() {
         
         // 處理上市
         const twseData = Array.isArray(twseRes.data) ? twseRes.data : [];
+        if (twseData.length === 0) {
+            console.error('警告：未能獲取上市股票資料！');
+        }
         twseData.forEach(s => {
             const indCode = s['產業別'];
             allStocks.push({
@@ -41,7 +44,12 @@ async function fetchFullStockList() {
         });
 
         // 處理上櫃
-        const tpexData = Array.isArray(tpexRes.data) ? tpexRes.data : [];
+        let tpexData = Array.isArray(tpexRes.data) ? tpexRes.data : [];
+        if (tpexData.length === 0) {
+            console.error('警告：未能從 OpenAPI 獲取上櫃股票資料 (可能 API 暫時不可用)。');
+            // 這裡可以考慮加入 CSV 備援方案，但目前先確保不輕易覆蓋舊資料
+        }
+        
         tpexData.forEach(s => {
             const indName = s['產業別'];
             allStocks.push({
@@ -51,6 +59,11 @@ async function fetchFullStockList() {
                 market: '上櫃'
             });
         });
+
+        if (allStocks.length < 500) {
+            console.error('錯誤：抓取的股票數量異常過低，放棄更新以保護現有資料。');
+            return;
+        }
 
         const outputPath = path.join(__dirname, '../data/all_stocks.json');
         await fs.writeJson(outputPath, allStocks, { spaces: 2 });
